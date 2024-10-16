@@ -15,8 +15,6 @@ def getFiles(service, page_token):
   
   return [results.get("files", []), results.get("nextPageToken", None)]
 
-
-
 def printFiles(items): 
   for i, item in enumerate(items):
 
@@ -28,3 +26,15 @@ def printFiles(items):
     
       i+=1
 
+
+def get_folder_id(service, folder_name, parent = "root"):
+  query = f"mimeType = 'application/vnd.google-apps.folder' and '{parent}' in parents and name='{folder_name}'"
+  
+  results = service.files().list(q=query, fields="files(id, name)").execute()
+
+  folder = results.get("files", [])
+
+  if not folder:
+    return None
+
+  return folder[0]["id"]

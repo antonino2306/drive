@@ -7,7 +7,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
-from filesFunction import getFiles, printFiles
+from filesFunction import getFiles, printFiles, get_folder_id
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", 
@@ -42,6 +42,7 @@ def main():
                       help = "List of all files and folder in your drive")
   
   parser.add_argument("--file-path", "-fp", help="Percorso del file")
+  parser.add_argument("--destination-path", "-dp", help="Percorso di destinazione")
 
 
   try:
@@ -49,7 +50,6 @@ def main():
 
     args = parser.parse_args()
     page_token = None
-    # query = "mimeType = 'application/vnd.google-apps.folder' and 'root' in parents"
     
     
     match args.execute: 
@@ -69,11 +69,25 @@ def main():
         
           print("Premi s per passare alla pagina successiva")
           input()
+      
       case "upload":
         if args.file_path == None:
           raise ArgumentError(parser._actions[1], message="To upload a file is required his path")
     
-        file_metadata = {"name": os.path.basename(args.file_path)}
+        if args.destination_path == None:
+            raise ArgumentError(parser._actions[1], message = "Destination path is required")
+        
+        path = args.destination_path.split("/")
+        path_ids = []
+        for i in range(len(path)):
+          if i == 0:
+            path_ids.append(get_folder_id(service, path[i]))
+          else:
+            path_ids.append(get_folder_id(service, path[i], path_ids[i-1]))
+
+        file_metadata = {"name": os.path.basename(args.file_path),
+                         "parents": [path_ids[len(path_ids)-1]]}
+        
         media = MediaFileUpload(args.file_path, resumable=True)
 
         service.files().create(body=file_metadata,
@@ -83,7 +97,16 @@ def main():
         print("Upload completed")
           
       case "download":
-        pass
+        path = args.destination_path.split("/")
+        path_ids = []
+        for i in range(len(path)):
+          if i == 0:
+            path_ids.append(get_folder_id(service, path[i]))
+          else:
+            path_ids.append(get_folder_id(service, path[i], path_ids[i-1]))
+
+        print(path_ids)
+
 
       case _:
         return 
