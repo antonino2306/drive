@@ -1,10 +1,24 @@
-def getFiles(service, page_token): 
+def get_folder_id(service, folder_name, parent = "root"):
+  query = f"mimeType = 'application/vnd.google-apps.folder' and '{parent}' in parents and name='{folder_name}'"
+  
+  results = service.files().list(q=query, fields="files(id, name)").execute()
+
+  folder = results.get("files", [])
+
+  if not folder:
+    return None
+
+  return folder[0]["id"]
+
+def getFiles(service, page_token, parent="root"): 
+  
   results = (
         service.files()
         .list(
           #? "root in parents" mi permette di ottenere tutte le cartelle che si trovano
           #? in "My drive"
-          q = "'root' in parents",
+          
+          q = f"'{parent}' in parents",
           pageSize = 10, 
           fields = "nextPageToken, files(mimeType, id, name, size)",
           orderBy = "folder, name",
@@ -25,16 +39,3 @@ def printFiles(items):
         print(f"{i}: {item['name']} {item["size"]} byte")
     
       i+=1
-
-
-def get_folder_id(service, folder_name, parent = "root"):
-  query = f"mimeType = 'application/vnd.google-apps.folder' and '{parent}' in parents and name='{folder_name}'"
-  
-  results = service.files().list(q=query, fields="files(id, name)").execute()
-
-  folder = results.get("files", [])
-
-  if not folder:
-    return None
-
-  return folder[0]["id"]

@@ -1,5 +1,5 @@
+from os import remove
 import os.path
-
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -38,12 +38,13 @@ def main():
     description="Command line tool to interact with google drive")
 
   parser.add_argument("-execute", "-e",
-                      choices = ["list-files", "upload", "download"], 
+                      choices = ["list-files", "upload", "download", "logout"], 
                       help = "List of all files and folder in your drive")
   
   parser.add_argument("--file-path", "-fp", help="Percorso del file")
   parser.add_argument("--destination-path", "-dp", help="Percorso di destinazione")
 
+  parser.add_argument("--prova", "-p", nargs="+")
 
   try:
     service = build("drive", "v3", credentials=creds)
@@ -54,21 +55,28 @@ def main():
     
     match args.execute: 
       case "list-files":
+
+        path_id = "root"
+        
+        if args.file_path != None:
+          path = args.file_path.split("/")
+          for folder in path:
+            path_id = get_folder_id(service, folder, path_id)
+
         while True: 
-          items, page_token = getFiles(service, page_token)
+          items, page_token = getFiles(service, page_token, path_id)
 
           if not items:
             print("No files found.")
             return
 
-          print("My drive:")
+          print("My drive" if path_id == "root" else args.file_path)
           printFiles(items)
 
           if not page_token: 
             break
         
-          print("Premi s per passare alla pagina successiva")
-          input()
+          # print("Premi s per passare alla pagina successiva")
       
       case "upload":
         if args.file_path == None:
@@ -78,15 +86,13 @@ def main():
             raise ArgumentError(parser._actions[1], message = "Destination path is required")
         
         path = args.destination_path.split("/")
-        path_ids = []
-        for i in range(len(path)):
-          if i == 0:
-            path_ids.append(get_folder_id(service, path[i]))
-          else:
-            path_ids.append(get_folder_id(service, path[i], path_ids[i-1]))
+
+        path_id = "root"
+        for folder in path:
+          path_id = get_folder_id(service, folder, path_id)
 
         file_metadata = {"name": os.path.basename(args.file_path),
-                         "parents": [path_ids[len(path_ids)-1]]}
+                         "parents": [path_id]}
         
         media = MediaFileUpload(args.file_path, resumable=True)
 
@@ -97,17 +103,12 @@ def main():
         print("Upload completed")
           
       case "download":
-        path = args.destination_path.split("/")
-        path_ids = []
-        for i in range(len(path)):
-          if i == 0:
-            path_ids.append(get_folder_id(service, path[i]))
-          else:
-            path_ids.append(get_folder_id(service, path[i], path_ids[i-1]))
+        pass
 
-        print(path_ids)
-
-
+      case "logout":
+        if os.path.exists("token.json"):
+          remove("token.json")
+      
       case _:
         return 
   
