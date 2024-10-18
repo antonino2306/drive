@@ -10,6 +10,20 @@ def get_folder_id(service, folder_name, parent = "root"):
 
   return folder[0]["id"]
 
+def get_file_id(service, file_name):
+   results = service.files().list(
+        q=f"name='{file_name}'",
+        fields="files(id, name)",
+        pageSize=10
+    ).execute()
+   
+   items = results.get("files", [])
+
+   if not items: 
+     return None
+   
+   return items[0]["id"]
+
 def getFiles(service, page_token, parent="root"): 
   
   results = (
@@ -36,6 +50,6 @@ def printFiles(items):
         print(f"{i}: \033[94m{item["name"]}\033[0m")
   
       else : 
-        print(f"{i}: {item['name']} {item["size"]} byte")
+        print(f"{i}: {item["id"]} {item['name']} {item["size"]} byte")
     
       i+=1

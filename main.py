@@ -1,13 +1,15 @@
 from os import remove
+import io
 import os.path
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
+from googleapiclient.http import MediaIoBaseDownload
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
-from filesFunction import getFiles, printFiles, get_folder_id
+from filesFunction import getFiles, printFiles, get_folder_id, get_file_id
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", 
@@ -37,14 +39,36 @@ def main():
   parser = ArgumentParser(
     description="Command line tool to interact with google drive")
 
-  parser.add_argument("-execute", "-e",
-                      choices = ["list-files", "upload", "download", "logout"], 
-                      help = "List of all files and folder in your drive")
+  # parser.add_argument("-execute", "-e",
+  #                     choices = ["list-files", "upload", "download", "logout"], 
+  #                     help = "List of all files and folder in your drive")
   
-  parser.add_argument("--file-path", "-fp", help="Percorso del file")
-  parser.add_argument("--destination-path", "-dp", help="Percorso di destinazione")
+  # parser.add_argument("--file-path", "-fp", help="Percorso del file")
+  # parser.add_argument("--destination-path", "-dp", help="Percorso di destinazione")
 
-  parser.add_argument("--prova", "-p", nargs="+")
+  # parser.add_argument("--prova", "-p", nargs="+")
+
+  parser.add_argument(
+    "--list-files", 
+    "-ls",
+    metavar="folder-path",
+    help="List all the files and folders in a directory (use root as folder-path to list My drive)",)
+  
+  parser.add_argument(
+    "--upload",
+    "-u",
+    metavar=("file-path", "destination-folder-path"),
+    help="Upload a file in a specific folder.",
+    nargs=2
+  )
+
+  parser.add_argument(
+    "--download",
+    "-d",
+    metavar="file-path",
+    help="download a file from drive")
+  
+  parser.add_argument("--logout", action="store_true")
 
   try:
     service = build("drive", "v3", credentials=creds)
@@ -52,66 +76,73 @@ def main():
     args = parser.parse_args()
     page_token = None
     
-    
-    match args.execute: 
-      case "list-files":
-
-        path_id = "root"
+    if args.logout:
+      if os.path.exists("token.json"):
+        remove("token.json")
         
-        if args.file_path != None:
-          path = args.file_path.split("/")
-          for folder in path:
-            path_id = get_folder_id(service, folder, path_id)
-
-        while True: 
-          items, page_token = getFiles(service, page_token, path_id)
-
-          if not items:
-            print("No files found.")
-            return
-
-          print("My drive" if path_id == "root" else args.file_path)
-          printFiles(items)
-
-          if not page_token: 
-            break
-        
-          # print("Premi s per passare alla pagina successiva")
+      return
       
-      case "upload":
-        if args.file_path == None:
-          raise ArgumentError(parser._actions[1], message="To upload a file is required his path")
-    
-        if args.destination_path == None:
-            raise ArgumentError(parser._actions[1], message = "Destination path is required")
-        
-        path = args.destination_path.split("/")
+    if args.list_files:
 
-        path_id = "root"
+      path_id = "root"
+        
+      #? list_files contains the path of the folder to print
+      if args.list_files != "root":
+        path = args.list_files.split("/")
         for folder in path:
           path_id = get_folder_id(service, folder, path_id)
 
-        file_metadata = {"name": os.path.basename(args.file_path),
-                         "parents": [path_id]}
-        
-        media = MediaFileUpload(args.file_path, resumable=True)
+      while True: 
+        items, page_token = getFiles(service, page_token, path_id)
 
-        service.files().create(body=file_metadata,
-                              media_body=media,
-                              fields="id").execute()
-        
-        print("Upload completed")
-          
-      case "download":
-        pass
+        if not items:
+          print("No files found.")
+          return
 
-      case "logout":
-        if os.path.exists("token.json"):
-          remove("token.json")
+        print("My drive" if path_id == "root" else args.list_files)
+        printFiles(items)
+
+        if not page_token: 
+          break
+
+    if args.upload:
+      if len(args.upload) < 2:
+          raise ArgumentError(parser._actions[1], message="File path and destination path are both required")
+
+      #? upload[0] contains file-path and upload[1] contains destination-path    
+      path_id = "root"
+
+      if args.upload[1] != "root":
+        path = args.upload[1].split("/")
+        for folder in path:
+          path_id = get_folder_id(service, folder, path_id)
+
+      file_metadata = {"name": os.path.basename(args.upload[0]),
+                        "parents": [path_id]}
       
-      case _:
-        return 
-  
+      media = MediaFileUpload(args.upload[0], resumable=True)
+
+      service.files().create(body=file_metadata,
+                            media_body=media,
+                            fields="id").execute()
+      
+      print("Upload completed")
+          
+    if args.download:
+      path = args.download.split("/")
+      file_name = path[len(path)-1]
+
+      file_id = get_file_id(service, file_name)
+
+      request = service.files().get_media(fileId = file_id)
+      fh = io.FileIO(f"/home/anto/Scaricati/{file_name}", 'wb')
+      downloader = MediaIoBaseDownload(fh, request)
+
+      done = False
+      while not done:
+          status, done = downloader.next_chunk()
+          print(f"Download progress: {int(status.progress() * 100)}%")
+    
   except (HttpError, ArgumentError) as error:
     # TODO(developer) - Handle errors from drive API.
     print(f"An error occurred: {error}")
