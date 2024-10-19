@@ -52,6 +52,6 @@ def printFiles(items):
         print(f"{i}: \033[94m{item["name"]}\033[0m")
   
       else : 
-        print(f"{i}: {item["id"]} {item['name']} {item["size"]} byte")
+        print(f"{i}: {item['name']} {item["size"]} byte")
     
       i+=1
