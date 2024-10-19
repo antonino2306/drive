@@ -1,3 +1,5 @@
+from customErrors import *
+
 def get_folder_id(service, folder_name, parent = "root"):
   query = f"mimeType = 'application/vnd.google-apps.folder' and '{parent}' in parents and name='{folder_name}'"
   
@@ -6,7 +8,7 @@ def get_folder_id(service, folder_name, parent = "root"):
   folder = results.get("files", [])
 
   if not folder:
-    return None
+    raise FolderError(f"The folder named {folder_name} doesn't exist. Check the path")
 
   return folder[0]["id"]
 
@@ -20,7 +22,7 @@ def get_file_id(service, file_name):
    items = results.get("files", [])
 
    if not items: 
-     return None
+     raise NonExistentFileError(f"Can't find a file named: {file_name}")
    
    return items[0]["id"]
 

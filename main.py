@@ -10,6 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from filesFunction import getFiles, printFiles, get_folder_id, get_file_id
+from customErrors import *
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", 
@@ -38,15 +39,6 @@ def main():
 
   parser = ArgumentParser(
     description="Command line tool to interact with google drive")
-
-  # parser.add_argument("-execute", "-e",
-  #                     choices = ["list-files", "upload", "download", "logout"], 
-  #                     help = "List of all files and folder in your drive")
-  
-  # parser.add_argument("--file-path", "-fp", help="Percorso del file")
-  # parser.add_argument("--destination-path", "-dp", help="Percorso di destinazione")
-
-  # parser.add_argument("--prova", "-p", nargs="+")
 
   parser.add_argument(
     "--list-files", 
@@ -143,7 +135,7 @@ def main():
           status, done = downloader.next_chunk()
           print(f"Download progress: {int(status.progress() * 100)}%")
     
-  except (HttpError, ArgumentError) as error:
+  except (HttpError, ArgumentError, FolderError, NonExistentFileError) as error:
     # TODO(developer) - Handle errors from drive API.
     print(f"An error occurred: {error}")
 
