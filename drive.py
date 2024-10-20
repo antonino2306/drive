@@ -13,12 +13,13 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from filesFunction import getFiles, printFiles, get_folder_id, get_file_id
 from customErrors import *
-
+from configFunctions import configure_destination_folder, change_destination_folder
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", 
           "https://www.googleapis.com/auth/drive"]
 
 def main():
+
   creds = None
   # The file token.json stores the user's access and refresh tokens, and is
   # created automatically when the authorization flow completes for the first
@@ -63,6 +64,11 @@ def main():
     help="download a file from drive")
   
   parser.add_argument("--logout", action="store_true")
+
+  parser.add_argument("--change-download-destination", 
+                      "-cdd", 
+                      metavar="new-destination-path",
+                      help="Set the new download destination folder")
 
   try:
     service = build("drive", "v3", credentials=creds)
@@ -123,19 +129,23 @@ def main():
       print("Upload completed")
           
     if args.download:
+      destination_path = configure_destination_folder()
       path = args.download.split("/")
       file_name = path[len(path)-1]
 
       file_id = get_file_id(service, file_name)
 
       request = service.files().get_media(fileId = file_id)
-      fh = io.FileIO(f"/home/anto/Scaricati/{file_name}", 'wb')
+      fh = io.FileIO(f"{destination_path}/{file_name}", 'wb')
       downloader = MediaIoBaseDownload(fh, request)
 
       done = False
       while not done:
           status, done = downloader.next_chunk()
           print(f"Download progress: {int(status.progress() * 100)}%")
+
+    if args.change_download_destination:
+      change_destination_folder(args.change_download_destination)
     
   except (HttpError, ArgumentError, FolderError, NonExistentFileError) as error:
     # TODO(developer) - Handle errors from drive API.
