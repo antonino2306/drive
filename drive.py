@@ -3,6 +3,7 @@
 from os import remove
 import io
 import os.path
+from json import load
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
 from googleapiclient.http import MediaIoBaseDownload
 from google.auth.transport.requests import Request
@@ -13,7 +14,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 from filesFunction import getFiles, printFiles, get_folder_id, get_file_id
 from customErrors import *
-from configFunctions import configure_destination_folder, change_destination_folder
+from configFunctions import first_configuration, change_destination_folder
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", 
           "https://www.googleapis.com/auth/drive"]
@@ -24,19 +25,28 @@ def main():
   # The file token.json stores the user's access and refresh tokens, and is
   # created automatically when the authorization flow completes for the first
   # time.
-  if os.path.exists("/home/anto/code/projects/drive/token.json"):
-    creds = Credentials.from_authorized_user_file("/home/anto/code/projects/drive/token.json", SCOPES)
+
+  code_folder = os.path.dirname(os.path.abspath(__file__))
+
+  if not os.path.exists(f"{code_folder}/config.json"):
+    first_configuration(code_folder)
+
+  with open(f"{code_folder}/config.json", "r") as config_file:
+    paths = load(config_file)
+
+  if os.path.exists(f"{code_folder}/token.json"):
+    creds = Credentials.from_authorized_user_file(f"{code_folder}/token.json", SCOPES)
   # If there are no (valid) credentials available, let the user log in.
   if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
       creds.refresh(Request())
     else:
       flow = InstalledAppFlow.from_client_secrets_file(
-          "/home/anto/code/projects/drive/credentials.json", SCOPES
+          f"{code_folder}/credentials.json", SCOPES
       )
       creds = flow.run_local_server(port=0)
     # Save the credentials for the next run
-    with open("/home/anto/code/projects/drive/token.json", "w") as token:
+    with open(f"{code_folder}/token.json", "w") as token:
       token.write(creds.to_json())
 
 
@@ -70,6 +80,8 @@ def main():
                       metavar="new-destination-path",
                       help="Set the new download destination folder")
 
+  parser.add_argument("--prova", "-p", action="store_true")
+
   try:
     service = build("drive", "v3", credentials=creds)
 
@@ -77,8 +89,8 @@ def main():
     page_token = None
     
     if args.logout:
-      if os.path.exists("token.json"):
-        remove("token.json")
+      if os.path.exists(f"{code_folder}/token.json"):
+        remove(f"{code_folder}/token.json")
         
       return
       
@@ -129,7 +141,7 @@ def main():
       print("Upload completed")
           
     if args.download:
-      destination_path = configure_destination_folder()
+      destination_path = paths["download_folder"]
       path = args.download.split("/")
       file_name = path[len(path)-1]
 
@@ -145,7 +157,10 @@ def main():
           print(f"Download progress: {int(status.progress() * 100)}%")
 
     if args.change_download_destination:
-      change_destination_folder(args.change_download_destination)
+      change_destination_folder(code_folder, args.change_download_destination)
+
+    if args.prova:
+      print(os.path.expanduser("~"))
     
   except (HttpError, ArgumentError, FolderError, NonExistentFileError) as error:
     # TODO(developer) - Handle errors from drive API.
