@@ -160,7 +160,7 @@ def main():
       change_destination_folder(code_folder, args.change_download_destination)
 
     if args.prova:
-      print(os.path.expanduser("~"))
+      pass
     
   except (HttpError, ArgumentError, FolderError, NonExistentFileError) as error:
     # TODO(developer) - Handle errors from drive API.
