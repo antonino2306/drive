@@ -4,7 +4,7 @@ from os import remove
 import io
 import os.path
 from json import load
-from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
+from argparse import ArgumentParser, ArgumentError
 from googleapiclient.http import MediaIoBaseDownload
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -161,7 +161,7 @@ def main():
 
     if args.prova:
       pass
-    
+
   except (HttpError, ArgumentError, FolderError, NonExistentFileError) as error:
     # TODO(developer) - Handle errors from drive API.
     print(f"An error occurred: {error}")

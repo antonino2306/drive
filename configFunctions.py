@@ -1,8 +1,7 @@
 import os
 from json import load, dump
 import pkg_resources
-from sys import executable
-from subprocess import check_call
+
 
 def check_dependencies(code_folder):
     with open(f"{code_folder}/requirements.txt", "r") as dependencies_list:
@@ -18,18 +17,18 @@ def check_dependencies(code_folder):
 
     return missing_packages
 
-def install_dependencies(missing_packages):
+# def install_dependencies(missing_packages):
 
-    print("Installazione dipendenze mancanti")
-    check_call(executable, "-m", "pip", "install", *missing_packages)
+#     print("Installazione dipendenze mancanti")
+#     check_call(executable, "-m", "pip", "install", *missing_packages)
 
-    print("Tutte le dipendenze sono state installate")
+#     print("Tutte le dipendenze sono state installate")
     
 def first_configuration(code_folder):
 
-    missing_packages = check_dependencies(code_folder)
-    if missing_packages:
-        install_dependencies(missing_packages)
+    # missing_packages = check_dependencies(code_folder)
+    # if missing_packages:
+    #     install_dependencies(missing_packages)
 
     default_download_path = f"{os.path.expanduser("~")}/drive_downloads"
     os.mkdir(default_download_path)
