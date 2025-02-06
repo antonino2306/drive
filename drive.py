@@ -81,8 +81,6 @@ def main():
                       metavar="new-destination-path",
                       help="Set the new download destination folder")
 
-  parser.add_argument("--prova", "-p", action="store_true")
-
   try:
     service = build("drive", "v3", credentials=creds)
 
@@ -159,9 +157,6 @@ def main():
 
     if args.change_download_destination:
       change_destination_folder(code_folder, args.change_download_destination)
-
-    if args.prova:
-      pass
 
   except (HttpError, ArgumentError, FolderError, NonExistentFileError) as error:
     # TODO(developer) - Handle errors from drive API.
