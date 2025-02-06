@@ -36,6 +36,7 @@ def main():
 
   if os.path.exists(f"{code_folder}/token.json"):
     creds = Credentials.from_authorized_user_file(f"{code_folder}/token.json", SCOPES)
+    
   # If there are no (valid) credentials available, let the user log in.
   if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
@@ -44,7 +45,7 @@ def main():
       flow = InstalledAppFlow.from_client_secrets_file(
           f"{code_folder}/credentials.json", SCOPES
       )
-      creds = flow.run_local_server(port=0)
+      creds = flow.run_local_server(port=0, access_type="offline", prompt="consent")
     # Save the credentials for the next run
     with open(f"{code_folder}/token.json", "w") as token:
       token.write(creds.to_json())
